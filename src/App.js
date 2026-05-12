@@ -14,6 +14,7 @@ Once you see those 4 buckets, React stops feeling like random magic and starts f
 function App() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [error, setError] = useState("");
 
   // Add New Task
   const addTask = () => {
@@ -27,10 +28,24 @@ function App() {
         description: newTask,
         completed: false
       })
-    }).then(() => {
-      loadTasks();
-      setNewTask("");
-    });
+    })
+      .then(async (response) => {
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText);
+        }
+
+        return response.json();
+      })
+      .then(() => {
+        loadTasks();
+        setNewTask("");
+        setError("");
+      })
+      .catch((err) => {
+        setError(err.message);
+      });
   };
 
   // Complete Task
@@ -47,7 +62,6 @@ function App() {
       task.description
     );
 
-    if (!updatedDescription) return;
 
     fetch(`http://localhost:8080/tasks/${task.id}`, {
       method: "PUT",
@@ -58,7 +72,27 @@ function App() {
         ...task,
         description: updatedDescription
       })
-    }).then(() => loadTasks());
+    }).then(async (response) => {
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText);
+      }
+
+      const successMessage = await response.text();
+      return successMessage;
+
+     
+
+    }).then(() => {
+        loadTasks();
+        setNewTask("");
+        setError("");
+      })
+      .catch((err) => {
+        setError(err.message);
+      });
+
   };
 
   // Delete Task
@@ -98,10 +132,13 @@ function App() {
         placeholder="Enter task" />
 
       <button onClick={addTask}>Add Task</button>
+
+      {error && <p>{error}</p>}
       <ul>
         {tasks.map(task => (
           <li key={task.id}>
-            {task.description} {task.completed ? "✅" : "❌"}
+            {task.id}: {task.description}
+            &nbsp;&nbsp;{task.completed ? "✅" : "❌"}
             &nbsp;&nbsp;<button onClick={() => updateTask(task)}>Edit</button>
             &nbsp;&nbsp;<button onClick={() => completeTask(task.id)}>Complete</button>
             &nbsp;&nbsp;<button onClick={() => makeTaskPending(task.id)}>Make Pending</button>
@@ -112,5 +149,5 @@ function App() {
     </div>
   );
 }
-
+// npm install / start
 export default App;
